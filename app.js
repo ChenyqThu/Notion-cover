@@ -5,7 +5,7 @@ const port = process.env.PORT || 3000;
 require('dotenv').config();
 
 // 使用环境变量
-const PIXBABY_API_KEY = process.env.PIXBABY_API_KEY;
+const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
 
 // 图标缓存
 const iconCache = new Map();
