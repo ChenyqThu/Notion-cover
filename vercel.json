@@ -11,8 +11,5 @@
         "src": "/(.*)",
         "dest": "/app.js"
       }
-    ],
-    "env": {
-      "PIXABAY_API_KEY": "@pixabay-api-key"
-    }
+    ]
   }
