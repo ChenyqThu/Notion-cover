@@ -238,7 +238,7 @@ async function generateSVG(params) {
   // 创建背景渐变
   let backgroundFill = '';
   if (bgColors.length > 1) {
-    backgroundFill = `<linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+    backgroundFill = `<linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       ${bgColors.map((color, index) => 
         `<stop offset="${(index * 100) / (bgColors.length - 1)}%" stop-color="${color}" />`
       ).join('')}
@@ -248,7 +248,7 @@ async function generateSVG(params) {
   // 创建文本渐变
   let textFill = '';
   if (textColors.length > 1) {
-    textFill = `<linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+    textFill = `<linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       ${textColors.map((color, index) => 
         `<stop offset="${(index * 100) / (textColors.length - 1)}%" stop-color="${color}" />`
       ).join('')}
