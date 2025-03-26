@@ -7,6 +7,109 @@ require('dotenv').config();
 // 使用环境变量
 const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
 
+// 获取颜色值，支持命名颜色和十六进制值
+function getColorValue(color) {
+    // 处理已命名的颜色
+    const colorMap = {
+      'red': '#cf5659',
+      'green': '#3cb371',
+      'pink': '#ed6ea0',
+      'yellow': '#ffd700',
+      'blue': '#5aa9e6',
+      'cyan': '#00ffff',
+      'purple': '#800080',
+      'orange': '#ffa500',
+      'lime': '#00ff00',
+      'teal': '#008080',
+      'black': '#000000',
+      'white': '#ffffff',
+      'gray': '#808080',
+      'brown': '#a52a2a',
+      'navy': '#000080',
+      'violet': '#ee82ee',
+      'indigo': '#4b0082',
+      'gold': '#ffd700',
+      'silver': '#c0c0c0',
+      'magenta': '#ff00ff'
+    };
+    
+    // 如果是预定义颜色，返回其十六进制值
+    if (colorMap[color.toLowerCase()]) {
+      return colorMap[color.toLowerCase()];
+    }
+    
+    // 如果已经是十六进制格式，直接返回
+    if (color.startsWith('#')) {
+      return color;
+    }
+    
+    // 尝试解析为十六进制
+    try {
+      // 支持简写，如"f00"转为"#ff0000"
+      if (/^[0-9a-f]{3}$/i.test(color)) {
+        const r = color.charAt(0);
+        const g = color.charAt(1);
+        const b = color.charAt(2);
+        return `#${r}${r}${g}${g}${b}${b}`;
+      }
+      
+      // 支持6位十六进制
+      if (/^[0-9a-f]{6}$/i.test(color)) {
+        return `#${color}`;
+      }
+    } catch (e) {
+      // 解析失败时返回默认蓝色
+      return '#4F46E5';
+    }
+    
+    // 默认返回蓝色
+    return '#4F46E5';
+  }
+
+// 函数用于使颜色变亮
+function lightenColor(hex, percent) {
+    // 去掉#号
+    hex = hex.replace('#', '');
+
+    // 将十六进制转换为RGB
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // 使颜色变亮
+    const lightenR = Math.min(255, r + (255 - r) * percent / 100);
+    const lightenG = Math.min(255, g + (255 - g) * percent / 100);
+    const lightenB = Math.min(255, b + (255 - b) * percent / 100);
+
+    // 转回十六进制
+    const lightenHex = '#' + 
+        Math.round(lightenR).toString(16).padStart(2, '0') +
+        Math.round(lightenG).toString(16).padStart(2, '0') +
+        Math.round(lightenB).toString(16).padStart(2, '0');
+
+    return lightenHex;
+}
+
+// 函数用于创建美观的渐变
+function createGradient(colors, id = 'bgGradient') {
+    // 处理颜色数组 - 保证至少有两种颜色
+    const processedColors = colors.map(color => getColorValue(color));
+    
+    if (processedColors.length === 1) {
+      // 如果只有一种颜色，创建该颜色的浅色版本
+      processedColors.push(lightenColor(processedColors[0], 20));
+    }
+    
+    // 创建渐变定义，使用传入的 id
+    const gradientString = `<linearGradient id="${id}" x1="0%" y1="0%" x2="100%" y2="100%">
+      ${processedColors.map((color, index) => 
+        `<stop offset="${(index * 100) / (processedColors.length - 1)}%" stop-color="${color}" />`
+      ).join('')}
+    </linearGradient>`;
+    
+    return gradientString;
+}
+
 // 图标缓存
 const iconCache = new Map();
 
@@ -30,11 +133,8 @@ async function getIconData(iconPrefix, iconName, iconColor, iconSize) {
     const params = new URLSearchParams();
     if (iconSize) params.append('height', iconSize);
     if (iconColor) {
-      // 确保颜色格式正确（# 需转为 %23）
-      const formattedColor = iconColor.startsWith('#') 
-        ? iconColor.replace('#', '%23') 
-        : iconColor;
-      params.append('color', formattedColor);
+        let hexColor = getColorValue(iconColor);
+        params.append('color', hexColor);
     }
     
     // 使用 Iconify API 获取图标
@@ -158,57 +258,57 @@ async function getBackgroundImage(params) {
   }
 }
 
-// 生成图案背景
+// 生成图案背景 - 更新版本
 function generatePatternBackground(patternType = 'grid', colors) {
-  let pattern = '';
-  
-  // 确保至少有一种颜色
-  const mainColor = colors[0] || '#4F46E5';
-  const secondColor = colors[1] || '#818CF8';
-  
-  switch (patternType) {
-    case 'grid':
-      pattern = `<pattern id="pattern-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-        <rect width="40" height="40" fill="${mainColor}"/>
-        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="${secondColor}" stroke-width="1"/>
-      </pattern>`;
-      return { pattern, fill: 'url(#pattern-grid)' };
+    let pattern = '';
     
-    case 'dots':
-      pattern = `<pattern id="pattern-dots" width="20" height="20" patternUnits="userSpaceOnUse">
-        <rect width="20" height="20" fill="${mainColor}"/>
-        <circle cx="10" cy="10" r="2" fill="${secondColor}"/>
-      </pattern>`;
-      return { pattern, fill: 'url(#pattern-dots)' };
+    // 确保颜色是十六进制格式
+    const mainColor = getColorValue(colors[0] || '#4F46E5');
+    const secondColor = colors.length > 1 ? getColorValue(colors[1]) : lightenColor(mainColor, 30);
     
-    case 'diagonal':
-      pattern = `<pattern id="pattern-diagonal" width="40" height="40" patternUnits="userSpaceOnUse">
-        <rect width="40" height="40" fill="${mainColor}"/>
-        <path d="M0 40L40 0" stroke="${secondColor}" stroke-width="1"/>
-      </pattern>`;
-      return { pattern, fill: 'url(#pattern-diagonal)' };
-    
-    case 'waves':
-      pattern = `<pattern id="pattern-waves" width="100" height="20" patternUnits="userSpaceOnUse">
-        <rect width="100" height="20" fill="${mainColor}"/>
-        <path d="M0 10C20 5, 30 15, 50 10C70 5, 80 15, 100 10" stroke="${secondColor}" stroke-width="1" fill="none"/>
-      </pattern>`;
-      return { pattern, fill: 'url(#pattern-waves)' };
-    
-    case 'hexagons':
-      pattern = `<pattern id="pattern-hexagons" width="50" height="43.4" patternUnits="userSpaceOnUse">
-        <rect width="50" height="43.4" fill="${mainColor}"/>
-        <path d="M25 0L50 14.4v28.9L25 43.3L0 28.9V14.4z" stroke="${secondColor}" stroke-width="1" fill="none"/>
-      </pattern>`;
-      return { pattern, fill: 'url(#pattern-hexagons)' };
-    
-    default:
-      // 默认彩色渐变
-      return { 
-        pattern: '', 
-        fill: `linear-gradient(90deg, ${mainColor}, ${secondColor})`
-      };
-  }
+    switch (patternType) {
+      case 'grid':
+        pattern = `<pattern id="pattern-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="${mainColor}"/>
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="${secondColor}" stroke-width="1"/>
+        </pattern>`;
+        return { pattern, fill: 'url(#pattern-grid)' };
+      
+      case 'dots':
+        pattern = `<pattern id="pattern-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <rect width="20" height="20" fill="${mainColor}"/>
+          <circle cx="10" cy="10" r="2" fill="${secondColor}"/>
+        </pattern>`;
+        return { pattern, fill: 'url(#pattern-dots)' };
+      
+      case 'diagonal':
+        pattern = `<pattern id="pattern-diagonal" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="${mainColor}"/>
+          <path d="M0 40L40 0" stroke="${secondColor}" stroke-width="1"/>
+        </pattern>`;
+        return { pattern, fill: 'url(#pattern-diagonal)' };
+      
+      case 'waves':
+        pattern = `<pattern id="pattern-waves" width="100" height="20" patternUnits="userSpaceOnUse">
+          <rect width="100" height="20" fill="${mainColor}"/>
+          <path d="M0 10C20 5, 30 15, 50 10C70 5, 80 15, 100 10" stroke="${secondColor}" stroke-width="1" fill="none"/>
+        </pattern>`;
+        return { pattern, fill: 'url(#pattern-waves)' };
+      
+      case 'hexagons':
+        pattern = `<pattern id="pattern-hexagons" width="50" height="43.4" patternUnits="userSpaceOnUse">
+          <rect width="50" height="43.4" fill="${mainColor}"/>
+          <path d="M25 0L50 14.4v28.9L25 43.3L0 28.9V14.4z" stroke="${secondColor}" stroke-width="1" fill="none"/>
+        </pattern>`;
+        return { pattern, fill: 'url(#pattern-hexagons)' };
+      
+      default:
+        // 默认优化的渐变
+        return { 
+          pattern: '', 
+          fill: `linear-gradient(135deg, ${mainColor}, ${secondColor})`
+        };
+    }
 }
 
 // 根据参数创建SVG图片
@@ -218,7 +318,7 @@ async function generateSVG(params) {
     iconprefix, 
     iconname,
     content = '示例页面', 
-    bgcolor = '#4F46E5', 
+    bgcolor = 'blue,cyan', 
     textcolor = '#FFFFFF',
     iconcolor, // 可选的图标颜色，默认与文本颜色相同
     iconsize = '100', // 默认图标尺寸
@@ -227,36 +327,32 @@ async function generateSVG(params) {
     bgid, // 背景图的 ID
     pattern // 图案背景类型
   } = params;
-  
-  // 确定图标颜色 - 如果没有指定，则使用文本颜色
-  const finalIconColor = iconcolor || textcolor;
-  
-  // 解析背景色和文本色
-  const bgColors = bgcolor.split(',');
-  const textColors = textcolor.split(',');
-  
-  // 创建背景渐变
-  let backgroundFill = '';
-  if (bgColors.length > 1) {
-    backgroundFill = `<linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      ${bgColors.map((color, index) => 
-        `<stop offset="${(index * 100) / (bgColors.length - 1)}%" stop-color="${color}" />`
-      ).join('')}
-    </linearGradient>`;
-  }
-  
-  // 创建文本渐变
-  let textFill = '';
-  if (textColors.length > 1) {
-    textFill = `<linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      ${textColors.map((color, index) => 
-        `<stop offset="${(index * 100) / (textColors.length - 1)}%" stop-color="${color}" />`
-      ).join('')}
-    </linearGradient>`;
-  }
-  
-  // 获取图标
-  const iconSvg = await getIconData(iconprefix, iconname, finalIconColor, iconsize);
+
+    // 处理背景色和文本色 - 转换命名颜色
+    // const bgColorInput = bgcolor || '#4F46E5';
+    // const textColorInput = textcolor || '#FFFFFF';
+
+    // 解析背景色和文本色
+    const bgColors = bgcolor.split(',').map(color => getColorValue(color.trim()));
+    const textColors = textcolor.split(',').map(color => getColorValue(color.trim()));
+    const iconColorInput = iconcolor || textColors[0];
+    const finalIconColor = getColorValue(iconColorInput.trim());
+
+    // 创建背景渐变
+    let backgroundFill = '';
+    if (bgColors.length > 1) {
+        backgroundFill = createGradient(bgColors, 'bgGradient');
+    }
+
+    // 创建文本渐变
+    let textFill = '';
+    if (textColors.length > 1) {
+        textFill = createGradient(textColors, 'textGradient'); // 文本使用水平渐变
+    }
+
+    // 获取图标
+    const iconSvg = await getIconData(iconprefix, iconname, finalIconColor, iconsize);
+
   
   // 开始生成 SVG
   let svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -274,7 +370,7 @@ async function generateSVG(params) {
   } else {
     backgroundStyle = bgColors.length > 1 ? 'url(#bgGradient)' : bgColors[0];
   }
-  
+
   svg += `\n  </defs>`;
   
   // 添加背景
@@ -309,7 +405,7 @@ async function generateSVG(params) {
   const iconWidth = hasIcon ? parseInt(iconsize) + 30 : 0; // 图标宽度 + 间距
   
   // 计算文本宽度 (估算值，每个字符约 50px)
-  const textWidth = content.length * 50;
+  const textWidth = content.length * 40;
   
   // 计算整体内容宽度
   const totalWidth = iconWidth + textWidth;
